@@ -49,7 +49,15 @@ module DataMigrate
         ::DataMigrate.config.data_migrations_path
       end
 
-      def run_migration(migration, direction)
+      def run_migration(migration, direction, db_config = nil)
+        migrations_paths = if Gem::Version.new(Rails.version) >= Gem::Version.new('7.0.0')
+          db_config&.migrations_paths || ::DataMigrate::SchemaMigration.migrations_paths
+        elsif Gem::Version.new(Rails.version) >= Gem::Version.new('6.1')
+          db_config&.configuration_hash&.fetch(:migrations_paths, nil) || ::DataMigrate::SchemaMigration.migrations_paths
+        else
+          db_config&.config&.fetch(:migrations_paths, nil) || ::DataMigrate::SchemaMigration.migrations_paths
+        end
+
         if migration[:kind] == :data
           ::ActiveRecord::Migration.write("== %s %s" % ['Data', "=" * 71])
           ::DataMigrate::DataMigrator.run(direction, data_migrations_path, migration[:version])
@@ -57,7 +65,7 @@ module DataMigrate
           ::ActiveRecord::Migration.write("== %s %s" % ['Schema', "=" * 69])
           ::DataMigrate::SchemaMigration.run(
             direction,
-            ::DataMigrate::SchemaMigration.migrations_paths,
+            migrations_paths,
             migration[:version]
           )
         end

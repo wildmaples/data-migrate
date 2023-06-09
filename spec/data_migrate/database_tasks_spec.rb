@@ -87,4 +87,69 @@ describe DataMigrate::DatabaseTasks do
       end
     end
   end
+
+  describe ".run_migration" do
+    context "with db_config provided" do
+      let(:second_db_config) do
+        ActiveRecord::DatabaseConfigurations::HashConfig.new('test', 'test1', { database: "spec/db/test.db", adapter: "sqlite3", version: "20230601191158", migrations_paths: "thing/db/migration"})
+      end
+
+      context 'for a schema migration' do
+        let(:migration) do
+          { version: "20230601191158", kind: :schema, direction: :up }
+        end
+
+        it 'runs schema migration' do
+          allow(::DataMigrate::SchemaMigration).to receive(:run)
+          subject.run_migration(migration, :up, second_db_config)
+          expect(::DataMigrate::SchemaMigration).to have_received(:run).with(
+            :up, "thing/db/migration", "20230601191158"
+          )
+        end
+      end
+
+      context 'for a data migration' do
+        let(:migration) do
+          { version: "20230601191158", kind: :data, direction: :up }
+        end
+
+        it 'runs data migration' do
+          allow(::DataMigrate::DataMigrator).to receive(:run)
+          subject.run_migration(migration, :up, second_db_config)
+          expect(::DataMigrate::DataMigrator).to have_received(:run).with(:up, "spec/db/data", "20230601191158")
+        end
+      end
+    end
+
+    context "with no custom db_config" do
+      context 'for a schema migration' do
+        let(:migration) do
+          { version: "20230601191158", kind: :schema, direction: :up }
+        end
+
+        it 'runs migration with original config' do
+          allow(DataMigrate::SchemaMigration).to receive(:migrations_paths).and_return(migration_path)
+          allow(::DataMigrate::SchemaMigration).to receive(:run)
+          subject.run_migration(migration, :up)
+          expect(::DataMigrate::SchemaMigration).to have_received(:run).with(
+            :up, "spec/db/migrate", "20230601191158"
+          )
+        end
+      end
+
+      context 'for a data migration' do
+        let(:migration) do
+          { version: "20230601191158", kind: :data, direction: :up }
+        end
+
+        it 'runs migration with original config' do
+          allow(DataMigrate::SchemaMigration).to receive(:migrations_paths).and_return(migration_path)
+          allow(::DataMigrate::DataMigrator).to receive(:run)
+          subject.run_migration(migration, :up)
+          expect(::DataMigrate::DataMigrator).to have_received(:run).with(:up, "spec/db/data", "20230601191158")
+        end
+      end
+    end
+  end
+
 end
