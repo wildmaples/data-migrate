@@ -16,11 +16,11 @@ namespace :db do
       migrations = []
 
       if target_version.nil?
-        migrations = DataMigrate::DatabaseTasks.pending_migrations.map{ |m| m.merge(:direction =>:up) }
+        migrations = DataMigrate::DatabaseTasks.pending_migrations(db_config).map{ |m| m.merge(:direction =>:up) }
       else
         current_schema_version = ActiveRecord::Migrator.current_version
         schema_migrations = if target_version > current_schema_version
-                              DataMigrate::DatabaseTasks.pending_schema_migrations.keep_if{ |m| m[:version] <= target_version }.map{ |m| m.merge(:direction =>:up) }
+                              DataMigrate::DatabaseTasks.pending_schema_migrations(db_config).keep_if{ |m| m[:version] <= target_version }.map{ |m| m.merge(:direction =>:up) }
                             elsif target_version < current_schema_version
                               DataMigrate::DatabaseTasks.past_migrations.keep_if{ |m| m[:version] > target_version }.map{ |m| m.merge(:direction =>:down) }
                             else # ==
@@ -50,9 +50,9 @@ namespace :db do
                      end
       end
 
-      migrations.each do |migration|
-        DataMigrate::DatabaseTasks.run_migration(migration, migration[:direction])
-      end
+        migrations.each do |migration|
+          DataMigrate::DatabaseTasks.run_migration(migration, migration[:direction], db_config)
+        end
       end
 
       Rake::Task["db:_dump"].invoke

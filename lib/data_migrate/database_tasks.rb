@@ -30,10 +30,10 @@ module DataMigrate
         end
       end
 
-      def pending_migrations
+      def pending_migrations(db_config = nil)
         sort_migrations(
-          pending_schema_migrations,
-          pending_data_migrations
+          pending_schema_migrations(db_config),
+          pending_data_migrations(db_config)
         )
       end
 
@@ -86,14 +86,16 @@ module DataMigrate
       end
     end
 
-    def self.pending_data_migrations
+    def self.pending_data_migrations(db_config = nil)
+      return [] if db_config && db_config.name != "primary"
+
       data_migrations = DataMigrate::DataMigrator.migrations(data_migrations_path)
       sort_migrations(DataMigrate::DataMigrator.new(:up, data_migrations ).
         pending_migrations.map {|m| { version: m.version, name: m.name, kind: :data }})
     end
 
-    def self.pending_schema_migrations
-      ::DataMigrate::SchemaMigration.pending_schema_migrations
+    def self.pending_schema_migrations(db_config = nil)
+      ::DataMigrate::SchemaMigration.pending_schema_migrations(db_config)
     end
 
     def self.past_migrations(sort = nil)

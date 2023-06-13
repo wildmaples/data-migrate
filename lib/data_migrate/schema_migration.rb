@@ -4,8 +4,9 @@ module DataMigrate
   # Helper class to getting access to db schema
   # to allow data/schema combiation tasks
   class SchemaMigration
-    def self.pending_schema_migrations
-      all_migrations = DataMigrate::MigrationContext.new(migrations_paths).migrations
+    def self.pending_schema_migrations(db_config = nil)
+      migration_paths = db_config&.migrations_paths || migrations_paths
+      all_migrations = DataMigrate::MigrationContext.new(migration_paths).migrations
       sort_migrations(
         ActiveRecord::Migrator.new(:up, all_migrations, ActiveRecord::Base.connection.schema_migration).
         pending_migrations.
